@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import java.util.ArrayList;
@@ -58,7 +59,7 @@ import android.widget.EditText;
  * Using Spotify SDK,
  */
 public class MainActivity extends Activity implements
-        PlayerNotificationCallback, ConnectionStateCallback {
+        PlayerNotificationCallback, ConnectionStateCallback, OnClickListener {
 
 
     private static final String CLIENT_ID = "51968b9f394540049602ba37ae4c7db5";
@@ -82,11 +83,46 @@ private Player mPlayer;
         AuthenticationRequest request = builder.build();
 
         AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
-
+        ImageButton pauseButton = (ImageButton) findViewById(R.id.pause);
+        pauseButton.setBackgroundResource(R.drawable.pause);
+        pauseButton.setOnClickListener(this);
+        ImageButton nextButton = (ImageButton) findViewById(R.id.next);
+        nextButton.setBackgroundResource(R.drawable.next);
+        nextButton.setOnClickListener(this);
 
 
     }
-
+    boolean pauseBool = false;
+    @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.pause) {
+            ImageButton pauseButton = (ImageButton) findViewById(R.id.pause);
+            if(!pauseBool) {
+                mPlayer.pause();
+                pauseButton.setBackgroundResource(R.drawable.play);
+                pauseBool = true;
+            }else{
+                mPlayer.resume();
+                pauseButton.setBackgroundResource(R.drawable.pause);
+                pauseBool = false;
+            }
+        }
+        else if (v.getId() == R.id.next) {
+            //Compute head stuff and display
+            mPlayer.skipToNext();
+            mPlayer.getPlayerState(new PlayerStateCallback() {
+                @Override
+                public void onPlayerState(PlayerState playerState) {
+                    if(!playerState.playing){
+                        mPlayer.getPlayerState(this);
+                    }else {
+                        System.out.println("Track Uri " + playerState.trackUri);
+                        new HttpAsyncTask().execute("https://api.spotify.com/v1/tracks/" + playerState.trackUri.split(":")[2] );
+                    }
+                }
+            });
+        }
+    }
 
 
     private class HttpAsyncTask extends AsyncTask<String, Void, String> {
@@ -175,7 +211,7 @@ private Player mPlayer;
                                     mPlayer.getPlayerState(this);
                                 }else {
                                     System.out.println("Track Uri " + playerState.trackUri);
-                                    new HttpAsyncTask().execute("https://api.spotify.com/v1/tracks/" + playerState.trackUri.split(":")[2]);
+                                    new HttpAsyncTask().execute("https://api.spotify.com/v1/tracks/" + playerState.trackUri.split(":")[2] );
                                 }
                             }
                         });

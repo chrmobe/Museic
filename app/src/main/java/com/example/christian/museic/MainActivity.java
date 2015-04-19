@@ -5,6 +5,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
+import java.util.ArrayList;
+
 import com.spotify.sdk.android.player.Spotify;
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
@@ -15,14 +22,47 @@ import com.spotify.sdk.android.player.Player;
 import com.spotify.sdk.android.player.PlayerNotificationCallback;
 import com.spotify.sdk.android.player.PlayerState;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
+import android.app.Activity;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
+
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONObject;
+import android.widget.EditText;
+
+/**
+ * Created by Christian, Shannon, and Jordan
+ * Using Spotify SDK,
+ */
 public class MainActivity extends Activity implements
         PlayerNotificationCallback, ConnectionStateCallback {
 
 
     private static final String CLIENT_ID = "51968b9f394540049602ba37ae4c7db5";
 
-    private static final String REDIRECT_URI = "museic-app-login://callback";
+    private static final String REDIRECT_URI = "museic-app-login://callback";//FUCK YOU TODO FIX
 
 // Request code that will be passed together with authentication result to the onAuthenticationResult callback
 // Can be any integer
@@ -41,8 +81,76 @@ private Player mPlayer;
         AuthenticationRequest request = builder.build();
 
         AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
+
+
+
     }
 
+
+
+    private class HttpAsyncTask extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... urls) {
+
+            return GET(urls[0]);
+        }
+        // onPostExecute displays the results of the AsyncTask.
+        @Override
+        protected void onPostExecute(String result) {
+            TextView elem1 = (TextView) findViewById(R.id.Songinfo);
+            elem1.setText(result);
+            //Toast.makeText(getBaseContext(), "Received!", Toast.LENGTH_LONG).show();
+            //etResponse.setText(result);
+        }
+    }
+    public static String GET(String url){
+        InputStream inputStream = null;
+        String result = "";
+        try {
+
+            // create HttpClient
+            HttpClient httpclient = new DefaultHttpClient();
+
+            // make GET request to the given URL
+            HttpGet getRequest = new HttpGet("https://api.spotify.com/v1/tracks/0eGsygTp906u18L0Oimnem");
+            getRequest.addHeader("Accept:", "application/json");
+            //getRequest.addHeader("Host:", "api.spotify.com");
+            //getRequest.addHeader("Accept-Encoding:", "gzip, deflate, compress");
+            //getRequest.addHeader("User-Agent:", "51968b9f394540049602ba37ae4c7db5");
+            HttpResponse httpResponse = httpclient.execute(getRequest);
+
+            // receive response as inputStream
+            inputStream = httpResponse.getEntity().getContent();
+
+            // convert inputstream to string
+            if(inputStream != null)
+                result = convertInputStreamToString(inputStream);
+            else
+                result = "Did not work!";
+
+        } catch (Exception e) {
+            Log.d("InputStream", e.getLocalizedMessage());
+        }
+
+        return result;
+    }
+    private static String convertInputStreamToString(InputStream inputStream) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+        String line = "";
+        String result = "";
+        while((line = bufferedReader.readLine()) != null) {
+            System.out.println(line);
+            if(line.toLowerCase().contains("name".toLowerCase())){
+                String temp = line.split(":")[1];
+                result = result + temp.replace("\"", "");
+            }
+        }
+        inputStream.close();
+        return result;
+
+    }
+
+    EditText etResponse;
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
@@ -57,7 +165,10 @@ private Player mPlayer;
                     public void onInitialized(Player player) {
                         mPlayer.addConnectionStateCallback(MainActivity.this);
                         mPlayer.addPlayerNotificationCallback(MainActivity.this);
-                        mPlayer.play("spotify:track:2TpxZ7JUBn3uw46aR7qd6V");
+                        mPlayer.play("spotify:user:1223090214:playlist:5A4TFRZVYxK1H1Bc9X9Bxl");
+                        //playlist from Christian's spotify
+                        new HttpAsyncTask().execute("https://api.spotify.com/v1/tracks/0eGsygTp906u18L0Oimnem");
+
                     }
 
                     @Override
@@ -120,4 +231,10 @@ private Player mPlayer;
         Spotify.destroyPlayer(this);
         super.onDestroy();
     }
+
+
+
+
+
+
 }

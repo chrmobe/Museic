@@ -12,6 +12,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import java.util.ArrayList;
 
+import com.spotify.sdk.android.player.PlayerStateCallback;
 import com.spotify.sdk.android.player.Spotify;
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
@@ -62,7 +63,7 @@ public class MainActivity extends Activity implements
 
     private static final String CLIENT_ID = "51968b9f394540049602ba37ae4c7db5";
 
-    private static final String REDIRECT_URI = "museic-app-login://callback";//FUCK YOU TODO FIX
+    private static final String REDIRECT_URI = "museic-login://callback";//FUCK YOU TODO FIX
 
 // Request code that will be passed together with authentication result to the onAuthenticationResult callback
 // Can be any integer
@@ -112,11 +113,11 @@ private Player mPlayer;
             HttpClient httpclient = new DefaultHttpClient();
 
             // make GET request to the given URL
-            HttpGet getRequest = new HttpGet("https://api.spotify.com/v1/tracks/0eGsygTp906u18L0Oimnem");
+            HttpGet getRequest = new HttpGet(url);
             getRequest.addHeader("Accept:", "application/json");
             //getRequest.addHeader("Host:", "api.spotify.com");
             //getRequest.addHeader("Accept-Encoding:", "gzip, deflate, compress");
-            //getRequest.addHeader("User-Agent:", "51968b9f394540049602ba37ae4c7db5");
+            getRequest.addHeader("User-Agent:", CLIENT_ID);
             HttpResponse httpResponse = httpclient.execute(getRequest);
 
             // receive response as inputStream
@@ -166,9 +167,19 @@ private Player mPlayer;
                         mPlayer.addConnectionStateCallback(MainActivity.this);
                         mPlayer.addPlayerNotificationCallback(MainActivity.this);
                         mPlayer.play("spotify:user:1223090214:playlist:5A4TFRZVYxK1H1Bc9X9Bxl");
+                        System.out.println("Getting State");
+                        mPlayer.getPlayerState(new PlayerStateCallback() {
+                            @Override
+                            public void onPlayerState(PlayerState playerState) {
+                                if(!playerState.playing){
+                                    mPlayer.getPlayerState(this);
+                                }else {
+                                    System.out.println("Track Uri " + playerState.trackUri);
+                                    new HttpAsyncTask().execute("https://api.spotify.com/v1/tracks/" + playerState.trackUri.split(":")[2]);
+                                }
+                            }
+                        });
                         //playlist from Christian's spotify
-                        new HttpAsyncTask().execute("https://api.spotify.com/v1/tracks/0eGsygTp906u18L0Oimnem");
-
                     }
 
                     @Override
